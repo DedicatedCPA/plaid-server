@@ -16,9 +16,10 @@ app.use(bodyParser.json());
 
 // 🔹 Restrict API access to only your website
 const corsOptions = {
-  origin: ["https://dedicatedcpa.com"], // ✅ Restrict API to your frontend
+  origin: ["https://dedicatedcpa.com", "https://www.dedicatedcpa.com"], // ✅ Allow your frontend
   methods: "GET,POST",
-  allowedHeaders: "Content-Type"
+  allowedHeaders: "Content-Type",
+  credentials: true // ✅ Allow credentials (important for secure API calls)
 };
 app.use(cors(corsOptions));
 
