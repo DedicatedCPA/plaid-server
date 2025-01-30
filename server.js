@@ -15,7 +15,8 @@ const app = express();
 app.use(bodyParser.json());
 
 // 🔹 Restrict API Access to Only Your Website (temp. Removed to be re added)
-app.use(cors()); // ✅ Fully removes all CORS restrictions (TEMPORARY)
+const cors = require('cors');
+app.use(cors()); // ✅ Fully removes all CORS restrictions
 
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
