@@ -5,27 +5,30 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const plaid = require('plaid');
+const { query } = require('./database'); // ✅ Import database functions
+const sgMail = require('@sendgrid/mail'); // ✅ Import SendGrid for email notifications
+
+// ✅ Set up SendGrid API Key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
 app.use(bodyParser.json());
+
+// 🔹 Restrict API access to only your website
 const corsOptions = {
-  origin: ["https://dedicatedcpa.com"], // Only allow requests from your website
+  origin: ["https://dedicatedcpa.com"], // ✅ Restrict API to your frontend
   methods: "GET,POST",
   allowedHeaders: "Content-Type"
 };
-
 app.use(cors(corsOptions));
-// 1. Read environment variables
+
+// ✅ 1. Read environment variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
 const PORT = process.env.PORT || 3000;
 
-// Debugging logs to ensure env variables are loaded
-console.log("Loaded PLAID_CLIENT_ID:", PLAID_CLIENT_ID);
-console.log("Loaded PLAID_SECRET:", PLAID_SECRET);
-
-// 2. Create Plaid client
+// ✅ 2. Create Plaid client
 const plaidClient = new plaid.PlaidApi(
   new plaid.Configuration({
     basePath: plaid.PlaidEnvironments[PLAID_ENV],
@@ -38,15 +41,9 @@ const plaidClient = new plaid.PlaidApi(
   })
 );
 
-// 3. Endpoint: Create Link Token
+// ✅ 3. Create Link Token (Frontend Uses This)
 app.post('/create_link_token', async (req, res) => {
   try {
-    console.log("🔹 Received request to create Link Token...");
-
-    if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-      throw new Error("❌ Missing Plaid credentials in environment variables.");
-    }
-
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: 'unique_user_id' },
       client_name: "My Bookkeeping Service",
@@ -55,7 +52,6 @@ app.post('/create_link_token', async (req, res) => {
       language: 'en'
     });
 
-    console.log("✅ Link token created successfully:", response.data);
     res.json({ link_token: response.data.link_token });
   } catch (error) {
     console.error('❌ Error creating link token:', error.response ? error.response.data : error.message);
@@ -63,56 +59,99 @@ app.post('/create_link_token', async (req, res) => {
   }
 });
 
-// 4. Endpoint: Exchange Public Token for Access Token
+// ✅ 4. Exchange Public Token for Access Token
 app.post('/exchange_public_token', async (req, res) => {
-  const { public_token } = req.body;
+  const { public_token, phone_number, client_name } = req.body;
 
-  if (!public_token) {
-    console.error("❌ ERROR: public_token is missing from request body.");
-    return res.status(400).json({ error: "public_token is required" });
+  if (!public_token || !phone_number || !client_name) {
+    return res.status(400).json({ error: "public_token, phone_number, and client_name are required" });
   }
 
   try {
-    console.log("🔹 Received public_token:", public_token);
     const tokenResponse = await plaidClient.itemPublicTokenExchange({ public_token });
 
-    console.log("✅ Successfully exchanged token:", tokenResponse.data);
-    res.json({ access_token: tokenResponse.data.access_token });
+    // ✅ Store the access token & client details in the database
+    await query(
+      "INSERT INTO users (phone_number, client_name, access_token, item_id) VALUES ($1, $2, $3, $4) ON CONFLICT (phone_number) DO NOTHING",
+      [phone_number, client_name, tokenResponse.data.access_token, tokenResponse.data.item_id]
+    );
+
+    res.json({ message: "✅ Account successfully linked." });
   } catch (error) {
     console.error("❌ Error exchanging public token:", error.response ? error.response.data : error);
     res.status(500).json({ error: "Failed to exchange token", details: error.response?.data });
   }
 });
 
-// 5. Endpoint: Fetch Transactions and Generate Quote
+// ✅ 5. Fetch Transactions & Store Quote Internally
 app.post('/get_transactions', async (req, res) => {
-  const { access_token } = req.body;
+  const { access_token, phone_number, client_name } = req.body;
+
+  if (!access_token || !phone_number || !client_name) {
+    return res.status(400).json({ error: "access_token, phone_number, and client_name are required" });
+  }
+
   try {
     const response = await plaidClient.transactionsGet({
       access_token,
-      start_date: '2024-01-01',
-      end_date: '2024-12-31'
+      start_date: '2023-01-01',
+      end_date: '2024-01-01'
     });
 
     const transactions = response.data.transactions;
     const numTransactions = transactions.length;
+    const accounts = response.data.accounts.map(acc => acc.mask); // ✅ Get last 4 digits for each account
 
-    // Simple tiered pricing logic
-    let price = 100;  // base price
-    if (numTransactions > 500) price += 50;
-    if (numTransactions > 1000) price += 100;
+    // ✅ Calculate transactions per month (average over last 12 months)
+    const transactionsPerMonth = Math.round(numTransactions / 12);
 
-    res.json({
-      transaction_count: numTransactions,
-      estimated_quote: `$${price}/month`
-    });
+    // ✅ Pricing Formula
+    let price = Math.max(110, numTransactions * 0.85); // $110 minimum or $0.85 per transaction
+    if (accounts.length > 0) price += 25; // First account $25
+    if (accounts.length > 1) price += 20; // Second account $20
+    if (accounts.length > 2) price += 20; // Third account $20
+    if (accounts.length > 3) price += (accounts.length - 3) * 15; // Fourth+ $15 each
+
+    // ✅ Store the quote in the database (INTERNAL)
+    await query(
+      "INSERT INTO quotes (client_name, phone_number, last_four_accounts, transactions_per_month, quote_amount, status) VALUES ($1, $2, $3, $4, $5, 'Pending')",
+      [client_name, phone_number, JSON.stringify(accounts), transactionsPerMonth, price]
+    );
+
+    // ✅ Send Email Notification to Your Team
+    const msg = {
+      to: process.env.ALERT_EMAIL,
+      from: "alerts@dedicatedcpa.com",
+      subject: `📢 New Quote Available - ${client_name}`,
+      html: `<h2>New Quote Available</h2>
+             <p><strong>Client Name:</strong> ${client_name}</p>
+             <p><strong>Phone Number:</strong> ${phone_number}</p>
+             <p><strong>Last 4 Digits of Bank Accounts:</strong> ${accounts.join(", ")}</p>
+             <p><strong>Transactions Per Month:</strong> ${transactionsPerMonth}</p>
+             <p><strong>Estimated Quote:</strong> $${price}/month</p>
+             <p><strong>Status:</strong> Pending</p>`
+    };
+    await sgMail.send(msg);
+
+    res.json({ message: "✅ Transactions retrieved successfully." });
   } catch (error) {
-    console.error('Error fetching transactions:', error.response ? error.response.data : error);
+    console.error('❌ Error fetching transactions:', error.response ? error.response.data : error);
     res.status(500).json({ error: 'Failed to fetch transactions', details: error.response?.data });
   }
 });
 
-// 6. Start the server
+// ✅ 6. Admin Route: View All Quotes
+app.get('/admin/quotes', async (req, res) => {
+  try {
+    const quotes = await query("SELECT * FROM quotes ORDER BY created_at DESC");
+    res.json(quotes);
+  } catch (error) {
+    console.error("❌ Error fetching quotes:", error);
+    res.status(500).json({ error: "Failed to fetch quotes" });
+  }
+});
+
+// ✅ Start the Server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
