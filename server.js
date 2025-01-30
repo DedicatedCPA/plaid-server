@@ -16,18 +16,11 @@ app.use(bodyParser.json());
 
 // 🔹 Restrict API Access to Only Your Website
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || origin.endsWith("dedicatedcpa.com")) {
-      callback(null, true); // ✅ Allow requests from dedicatedcpa.com & all subdomains
-    } else {
-      callback(new Error("❌ Not allowed by CORS"));
-    }
-  },
+  origin: "*", // ✅ Temporarily allow ALL domains for debugging
   methods: "GET,POST",
   allowedHeaders: "Content-Type",
-  credentials: true // ✅ Allows authentication cookies & headers
+  credentials: true
 };
-
 app.use(cors(corsOptions));
 
 // ✅ 1. Read Environment Variables
