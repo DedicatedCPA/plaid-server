@@ -8,8 +8,13 @@ const plaid = require('plaid');
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
+const corsOptions = {
+  origin: ["https://dedicatedcpa.com"], // Only allow requests from your website
+  methods: "GET,POST",
+  allowedHeaders: "Content-Type"
+};
 
+app.use(cors(corsOptions));
 // 1. Read environment variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
