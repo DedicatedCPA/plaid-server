@@ -61,16 +61,21 @@ app.post('/create_link_token', async (req, res) => {
 // 4. Endpoint: Exchange Public Token for Access Token
 app.post('/exchange_public_token', async (req, res) => {
   const { public_token } = req.body;
+
+  if (!public_token) {
+    console.error("❌ ERROR: public_token is missing from request body.");
+    return res.status(400).json({ error: "public_token is required" });
+  }
+
   try {
-    const tokenResponse = await plaidClient.itemPublicTokenExchange({
-      client_id: PLAID_CLIENT_ID, 
-      secret: PLAID_SECRET,
-      public_token
-    });
+    console.log("🔹 Received public_token:", public_token);
+    const tokenResponse = await plaidClient.itemPublicTokenExchange({ public_token });
+
+    console.log("✅ Successfully exchanged token:", tokenResponse.data);
     res.json({ access_token: tokenResponse.data.access_token });
   } catch (error) {
-    console.error('Error exchanging public token:', error.response ? error.response.data : error);
-    res.status(500).json({ error: 'Failed to exchange token', details: error.response?.data });
+    console.error("❌ Error exchanging public token:", error.response ? error.response.data : error);
+    res.status(500).json({ error: "Failed to exchange token", details: error.response?.data });
   }
 });
 
