@@ -14,14 +14,8 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const app = express();
 app.use(bodyParser.json());
 
-// 🔹 Restrict API Access to Only Your Website
-const corsOptions = {
-  origin: "*", // ✅ Temporarily allow ALL domains for debugging
-  methods: "GET,POST",
-  allowedHeaders: "Content-Type",
-  credentials: true
-};
-app.use(cors(corsOptions));
+// 🔹 Restrict API Access to Only Your Website (temp. Removed to be re added)
+app.use(cors()); // ✅ Fully removes all CORS restrictions (TEMPORARY)
 
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
