@@ -36,18 +36,24 @@ const plaidClient = new plaid.PlaidApi(
 // 3. Endpoint: Create Link Token
 app.post('/create_link_token', async (req, res) => {
   try {
+    console.log("🔹 Received request to create Link Token...");
+
+    if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
+      throw new Error("❌ Missing Plaid credentials in environment variables.");
+    }
+
     const response = await plaidClient.linkTokenCreate({
-      client_id: PLAID_CLIENT_ID, 
-      secret: PLAID_SECRET,
       user: { client_user_id: 'unique_user_id' },
       client_name: "My Bookkeeping Service",
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en'
     });
+
+    console.log("✅ Link token created successfully:", response.data);
     res.json({ link_token: response.data.link_token });
   } catch (error) {
-    console.error('Full Error Response:', error.response ? error.response.data : error);
+    console.error('❌ Error creating link token:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'Failed to create link token', details: error.response?.data });
   }
 });
