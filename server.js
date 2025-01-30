@@ -2,18 +2,24 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✅ Keep only this one
+const cors = require('cors'); // ✅ Only declare this once!
 const plaid = require('plaid');
 const { query } = require('./database'); 
 const sgMail = require('@sendgrid/mail');
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors()); // ✅ This opens CORS completely
+
+// ✅ Fix CORS - Open API temporarily
+const corsOptions = {
+  origin: "*", // ✅ Temporarily allow all origins
+  methods: "GET,POST",
+  allowedHeaders: "Content-Type"
+};
+app.use(cors(corsOptions)); // ✅ Apply unrestricted CORS
 
 // ✅ Set Up SendGrid API Key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
