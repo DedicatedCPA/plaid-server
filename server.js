@@ -1,18 +1,18 @@
 // ✅ Load Environment Variables
 require('dotenv').config();
-
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
+const cors = require('cors'); // ✅ Keep only this one
 const plaid = require('plaid');
-const { query } = require('./database'); // ✅ Import Database Functions
-const sgMail = require('@sendgrid/mail'); // ✅ Import SendGrid for Email Notifications
-
-// ✅ Set Up SendGrid API Key
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const { query } = require('./database'); 
+const sgMail = require('@sendgrid/mail');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(cors()); // ✅ This opens CORS completely
+
+// ✅ Set Up SendGrid API Key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // 🔹 Restrict API Access to Only Your Website (temp. Removed to be re added)
 const cors = require('cors');
