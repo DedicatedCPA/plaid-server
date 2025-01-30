@@ -14,10 +14,6 @@ app.use(cors()); // ✅ This opens CORS completely
 // ✅ Set Up SendGrid API Key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// 🔹 Restrict API Access to Only Your Website (temp. Removed to be re added)
-const cors = require('cors');
-app.use(cors()); // ✅ Fully removes all CORS restrictions
-
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
@@ -117,7 +113,7 @@ app.post('/get_transactions', async (req, res) => {
     // ✅ Send Email Notification to Your Team
     const msg = {
       to: process.env.ALERT_EMAIL,
-      from: "alerts@dedicatedcpa.com",
+      from: "client@dedicatedcpa.com",
       subject: `📢 New Quote Available - ${client_name}`,
       html: `<h2>New Quote Available</h2>
              <p><strong>Client Name:</strong> ${client_name}</p>
