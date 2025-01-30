@@ -1,35 +1,35 @@
-// Load environment variables
+// ✅ Load Environment Variables
 require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const plaid = require('plaid');
-const { query } = require('./database'); // ✅ Import database functions
-const sgMail = require('@sendgrid/mail'); // ✅ Import SendGrid for email notifications
+const { query } = require('./database'); // ✅ Import Database Functions
+const sgMail = require('@sendgrid/mail'); // ✅ Import SendGrid for Email Notifications
 
-// ✅ Set up SendGrid API Key
+// ✅ Set Up SendGrid API Key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
 app.use(bodyParser.json());
 
-// 🔹 Restrict API access to only your website
+// 🔹 Restrict API Access to Only Your Website
 const corsOptions = {
-  origin: ["https://dedicatedcpa.com", "https://www.dedicatedcpa.com"], // ✅ Allow your frontend
+  origin: ["https://dedicatedcpa.com", "https://www.dedicatedcpa.com"], // ✅ Allow frontend
   methods: "GET,POST",
   allowedHeaders: "Content-Type",
-  credentials: true // ✅ Allow credentials (important for secure API calls)
+  credentials: true // ✅ Important for secure API calls
 };
 app.use(cors(corsOptions));
 
-// ✅ 1. Read environment variables
+// ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
 const PORT = process.env.PORT || 3000;
 
-// ✅ 2. Create Plaid client
+// ✅ 2. Create Plaid Client
 const plaidClient = new plaid.PlaidApi(
   new plaid.Configuration({
     basePath: plaid.PlaidEnvironments[PLAID_ENV],
@@ -42,12 +42,12 @@ const plaidClient = new plaid.PlaidApi(
   })
 );
 
-// ✅ 3. Create Link Token (Frontend Uses This)
+// ✅ 3. Create Plaid Link Token (Used by Frontend)
 app.post('/create_link_token', async (req, res) => {
   try {
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: 'unique_user_id' },
-      client_name: "My Bookkeeping Service",
+      client_name: "Dedicated CPA",
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en'
@@ -71,7 +71,7 @@ app.post('/exchange_public_token', async (req, res) => {
   try {
     const tokenResponse = await plaidClient.itemPublicTokenExchange({ public_token });
 
-    // ✅ Store the access token & client details in the database
+    // ✅ Store Access Token & Client Details in Database
     await query(
       "INSERT INTO users (phone_number, client_name, access_token, item_id) VALUES ($1, $2, $3, $4) ON CONFLICT (phone_number) DO NOTHING",
       [phone_number, client_name, tokenResponse.data.access_token, tokenResponse.data.item_id]
@@ -103,7 +103,7 @@ app.post('/get_transactions', async (req, res) => {
     const numTransactions = transactions.length;
     const accounts = response.data.accounts.map(acc => acc.mask); // ✅ Get last 4 digits for each account
 
-    // ✅ Calculate transactions per month (average over last 12 months)
+    // ✅ Calculate Transactions Per Month (Average Over 12 Months)
     const transactionsPerMonth = Math.round(numTransactions / 12);
 
     // ✅ Pricing Formula
@@ -113,7 +113,7 @@ app.post('/get_transactions', async (req, res) => {
     if (accounts.length > 2) price += 20; // Third account $20
     if (accounts.length > 3) price += (accounts.length - 3) * 15; // Fourth+ $15 each
 
-    // ✅ Store the quote in the database (INTERNAL)
+    // ✅ Store Quote in Database (Internal)
     await query(
       "INSERT INTO quotes (client_name, phone_number, last_four_accounts, transactions_per_month, quote_amount, status) VALUES ($1, $2, $3, $4, $5, 'Pending')",
       [client_name, phone_number, JSON.stringify(accounts), transactionsPerMonth, price]
