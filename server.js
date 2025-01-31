@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 
 // ✅ CORS Configuration
 const corsOptions = {
-  origin: "*", // ✅ Temporarily allow all origins
+  origin: "https://plaid-frontend-7ub3.onrender.com", // ✅ Temporarily allow all origins
   methods: "GET,POST",
   allowedHeaders: "Content-Type"
 };
