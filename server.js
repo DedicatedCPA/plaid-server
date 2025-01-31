@@ -24,7 +24,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
-const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
+const PLAID_ENV = process.env.PLAID_ENV || 'production';
 const PORT = process.env.PORT || 3000;
 // ✅ 2. Create Plaid Client
 const plaidClient = new plaid.PlaidApi(
