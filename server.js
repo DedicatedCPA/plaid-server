@@ -10,14 +10,17 @@ const sgMail = require('@sendgrid/mail');
 const app = express();
 app.use(bodyParser.json());
 
-// ✅ Fix CORS - Open API temporarily
-const corsOptions = {
-  origin: "*", // ✅ Temporarily allow all origins
-  methods: "GET,POST",
-  allowedHeaders: "Content-Type"
-};
-app.use(cors(corsOptions)); // ✅ Apply unrestricted CORS
+// ✅ CORS Restrictions
+const cors = require('cors');
 
+const corsOptions = {
+  origin: ["https://dedicatedcpa.com", "https://www.dedicatedcpa.com", "https://plaid-frontend-7ub3.onrender.com"], 
+  methods: "GET,POST",
+  allowedHeaders: "Content-Type",
+  credentials: true 
+};
+
+app.use(cors(corsOptions));
 // ✅ Set Up SendGrid API Key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // ✅ 1. Read Environment Variables
