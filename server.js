@@ -2,7 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✅ Only declare this once!
+const cors = require('cors'); // ✅ Only declared once
 const plaid = require('plaid');
 const { query } = require('./database'); 
 const sgMail = require('@sendgrid/mail');
@@ -10,25 +10,22 @@ const sgMail = require('@sendgrid/mail');
 const app = express();
 app.use(bodyParser.json());
 
-// ✅ CORS Restrictions
-const cors = require('cors');
-
+// ✅ CORS Configuration
 const corsOptions = {
-  origin: ["https://dedicatedcpa.com", "https://www.dedicatedcpa.com", "https://plaid-frontend-7ub3.onrender.com"], 
+  origin: "*", // ✅ Temporarily allow all origins
   methods: "GET,POST",
-  allowedHeaders: "Content-Type",
-  credentials: true 
+  allowedHeaders: "Content-Type"
 };
+app.use(cors(corsOptions)); // ✅ Apply unrestricted CORS
 
-app.use(cors(corsOptions));
 // ✅ Set Up SendGrid API Key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 // ✅ 1. Read Environment Variables
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
 const PORT = process.env.PORT || 3000;
-
 // ✅ 2. Create Plaid Client
 const plaidClient = new plaid.PlaidApi(
   new plaid.Configuration({
